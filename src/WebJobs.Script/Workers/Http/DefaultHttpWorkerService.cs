@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Http
 
             try
             {
-                using (HttpRequestMessage httpRequestMessage = CreateAndGetHttpRequestMessage(scriptInvocationContext.FunctionMetadata.Name, scriptInvocationContext.ExecutionContext.InvocationId.ToString(), new HttpMethod(httpRequest.Method), httpRequest.GetQueryCollectionAsDictionary()))
+                using (HttpRequestMessage httpRequestMessage = CreateAndGetHttpRequestMessage(scriptInvocationContext.FunctionMetadata.Name, scriptInvocationContext.ExecutionContext.InvocationId.ToString(), new HttpMethod(httpRequest.Method), httpRequest.Path, httpRequest.GetQueryCollectionAsDictionary()))
                 {
                     _logger.LogDebug("Sending http request message for simple httpTrigger function: '{functionName}' invocationId: '{invocationId}'", scriptInvocationContext.FunctionMetadata.Name, scriptInvocationContext.ExecutionContext.InvocationId);
                     HttpResponseMessage invocationResponse = await _httpClient.SendAsync(httpRequestMessage);
@@ -156,10 +156,18 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Http
             }
         }
 
-        private HttpRequestMessage CreateAndGetHttpRequestMessage(string functionName, string invocationId, HttpMethod requestMethod, IDictionary<string, string> queryCollectionAsDictionary = null)
+        private HttpRequestMessage CreateAndGetHttpRequestMessage(string functionName, string invocationId, HttpMethod requestMethod, string requestPath = null, IDictionary<string, string> queryCollectionAsDictionary = null)
         {
             var requestMessage = new HttpRequestMessage();
+            if (!string.IsNullOrEmpty(requestPath))
+            {
+                var builder = new UriBuilder();
+                builder.Path = requestPath;
+                requestMessage.RequestUri = builder.Uri;
+            }
+
             AddRequestHeadersAndSetRequestUri(requestMessage, functionName, invocationId);
+
             if (queryCollectionAsDictionary != null)
             {
                 requestMessage.RequestUri = new Uri(QueryHelpers.AddQueryString(requestMessage.RequestUri.ToString(), queryCollectionAsDictionary));
